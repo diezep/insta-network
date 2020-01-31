@@ -127,6 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+<<<<<<< HEAD
 
 ##FOR THIS PROJECT##
 Follows/
@@ -135,3 +136,5 @@ Info/
 .chrome-data
 pw.txt
 cookies.pkl
+=======
+>>>>>>> ee56bbde5ce1d6b0e47b1bf434bf861acc50553b
