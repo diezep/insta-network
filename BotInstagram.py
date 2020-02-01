@@ -1,10 +1,11 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from random import randint
+import json
+import os.path
 import time
 from pickle import dump, load
-import os.path
-import json
+from random import randint
+
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 from utilities import waitLoading
 
@@ -17,7 +18,6 @@ class BotInstagram:
     cookiesPath = "cookies.pkl"
 
     def __init__(self, user, pw, target):
-
         # Setup variables
         self.user = user
         self.pw = pw
@@ -102,29 +102,26 @@ class BotInstagram:
             else:
                 return False
     def getFollowsFile(self, user):
-        user = user.replace('\n', '')
-        tFollowsXPath = '//*[@id="react-root"]/section/main/div/ul/li[3]/a/span'
-        usersXPath = '//*[@id="react-root"]/section/main/div[2]/ul/div/li'
-        tFollowersXPath = '//*[@id="react-root"]/section/main/div/ul/li[3]/a/span'
+        def scrollAllPage1():
+            scheight = 3.5
+            last_height = self.driver.execute_script("return document.body.scrollHeight")
+            while True:
 
-        bFollowsLen = len(self.driver.find_elements_by_xpath(tFollowsXPath))
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight /% s);" % scheight)
+                scheight += .1111
 
-        isFamous = False
-        error = False
+                time.sleep(0.1)
 
-        try:
-            int(self.driver.find_element_by_xpath(tFollowersXPath).text.replace('.', ''))
-        except:
-            isFamous = True
+                # if (len(self.driver.find_elements_by_class_name('QN7kB')) == 1):
+                #    error = True
+                #    break
 
-        while not self.existFollowsList(user) and bFollowsLen != 0 and not isFamous :
-            time.sleep(2)
-            bFollows = self.driver.find_element_by_xpath(tFollowsXPath)
-            print(f'Seguidos de {user} comenzando. [{bFollows.text} seguidos]')
+                new_height = self.driver.execute_script("return document.body.scrollHeight")
+                if new_height == last_height:
+                    break
+                last_height = new_height
 
-            bFollows.click()
-            waitLoading(3)
-
+        def scrollAllPage2():
             last_height = self.driver.execute_script("return document.body.scrollHeight")
             while True:
                 self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -137,17 +134,7 @@ class BotInstagram:
                     break
                 last_height = new_height
 
-            if len(self.driver.find_elements_by_css_selector('#react-root>section>main>div:nth-child(3)>ul>div>li.wo9IH.QN7kB>div'))==1:
-                seg = randint(1300,2000)
-                print(f"NOS DETECTARON. ESPERANDO {seg} SEGUNDOS.")
-                waitLoading( 3)
-                time.sleep(seg)
-                self.driver.execute_script("location.reload();")
-                waitLoading(10)
-                continue
-
-            usersLoaded = self.driver.find_elements_by_xpath(usersXPath)
-
+        def saveFollowersFile(user, list):
             username = lambda userElement: userElement.find_element_by_css_selector(
                 'div>div.t2ksc>div.enpQJ>div.d7ByH>a').text
 
@@ -160,17 +147,67 @@ class BotInstagram:
             followsFile.close()
 
             print(f'Seguidos de {user} finalizado.')
-            break
+
+        user = user.replace('\n', '')
+        tFollowsXPath = '//*[@id="react-root"]/section/main/div/ul/li[3]/a/span'
+        usersXPath = '//*[@id="react-root"]/section/main/div[2]/ul/div/li'
+        tFollowersXPath = '//*[@id="react-root"]/section/main/div/ul/li[3]/a/span'
+
+        bFollowsLen = len(self.driver.find_elements_by_xpath(tFollowsXPath))
+
+        isFamous = False
+
+        try:
+            int(self.driver.find_element_by_xpath(tFollowersXPath).text.replace('.', ''))
+        except:
+            isFamous = True
+
+        while not self.existFollowsList(user) and bFollowsLen != 0 and not isFamous:
+            time.sleep(2)
+            bFollows = self.driver.find_element_by_xpath(tFollowsXPath)
+            print(f'Seguidos de {user} comenzando. [{bFollows.text} seguidos]')
+
+            bFollows.click()
+            waitLoading(3)
+
+            scrollAllPage2()
+
+            if len(self.driver.find_elements_by_css_selector(
+                    '#react-root>section>main>div:nth-child(3)>ul>div>li.wo9IH.QN7kB>div')) == 1:
+                seg = randint(1300,2000)
+                print(f"NOS DETECTARON. ESPERANDO {seg} SEGUNDOS.")
+                waitLoading( 3)
+                time.sleep(seg)
+                self.driver.execute_script("location.reload();")
+                waitLoading(10)
+                continue
+
+            usersLoaded = self.driver.find_elements_by_xpath(usersXPath)
+
+            try:
+                saveFollowersFile(user, usersLoaded)
+                break
+            except:
+                Exception('Ha ocurrido un error al guardar.')
 
         else:
-            print(f'Error al obtener seguidos de {user}. Probablemente sea una cuenta privada o famosa.')
-            if bFollowsLen == 0 or isFamous:
+            if bFollowsLen == 0:
+                print(f"[PRIVADA] No se han podido obtener los seguidores de: {user}")
                 followsFile = open(f"Follows/{user}.txt", "w+")
-                time.sleep(1)
-                followsFile.close()
+
+
+            elif isFamous:
+                print(f"[FAMOSA] No se han podido obtener los seguidores de: {user}")
+                followsFile = open(f"Follows/{user}.txt", "w+")
+
+            time.sleep(1)
+            followsFile.close()
+
+
 
     def getInformationFile(self, user):
         user = user.replace("\n", "")
+
         x = '//*[@id="react-root"]/section/main/div/div[2]/article/div[1]/div/h2'
         if len(self.driver.find_elements_by_xpath(x)) == 0:
             followersXPath = '//*[@id="react-root"]/section/main/div/ul/li[2]/a/span'
@@ -185,14 +222,9 @@ class BotInstagram:
         pubsXPath = '//*[@id="react-root"]/section/main/div/ul/li[1]/span/span'
 
         gET = lambda xpath: self.driver.find_element_by_xpath(xpath).text
-        info = dict(
-            username=gET(userXPath),
-            name='',
-            description='',
-            nPubs='0',
-            nFollows='0',
-            nFollowers='0'
-        )
+        info = dict()
+
+        info['username'] = gET(userXPath)
 
         if len(self.driver.find_elements_by_xpath(nameXPath)) == 1:
             info['name'] = gET(nameXPath).encode("utf-8", "replace").decode()
