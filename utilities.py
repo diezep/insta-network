@@ -19,4 +19,4 @@ def waitForClick(driver, element_xpath):
         sleep(randFloat(1, 2))
 
 
-waitLoading = lambda d, max : sleep(2 + randFloat(1, max))
+waitLoading = lambda max: sleep(2 + randFloat(1, max))
