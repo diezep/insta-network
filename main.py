@@ -1,11 +1,9 @@
 import time
 
+import NetworkGraphs as ng
 from BotInstagram import BotInstagram
-
-# _____
 from utilities import waitLoading
 
-password = ""
 with open('pw.txt', 'r') as pw:
   password = pw.read()
 user = "simplecomment"
@@ -36,8 +34,8 @@ for user in usersFollow:
     bot.getFollowsFile(user)
 
 print("Red de escaneo de amigos completada.\n"
-      "-----------------------------------\n"
+      "------------------------------------\n"
       "  Iniciado relaciones en gráficas.")
 
-
+ng
 bot.exit()
