@@ -4,62 +4,117 @@ import json
 import matplotlib.pyplot as plt
 import networkx as nx
 
-# Build a dataframe with your connections
+from BotInstagram import existFollowsFile
 from User import User
 
 
 class NetworkGraph:
 
-    def __init__(self, target, listFriends, famousColor="1", normalColor="2", privateColor="3"):
+    def __init__(self, target, famousColor=4, normalColor=7, principalColor=9, xColor=2):
         self.target = target
-        self.listFriends = listFriends
         self.color_map = {
             'famous': famousColor,
             'normal': normalColor,
-            'private': privateColor,
+            'principal': principalColor,
+            'x': xColor
         }
 
+        self.G = nx.Graph()
+
+        self.G.add_node(target, tipo='principal')
+
         def usersConfigured():
+            users = []
             fileTarget = open(f'Follows/{target}.txt', 'r')
             targetFollows = fileTarget.readlines()
             for userFollowing in targetFollows:
-                infoFile = open(f"Info/{userFollowing}.txt", 'r')
-                jsonInfo = json.load(infoFile)
+                userFollowing = userFollowing.replace("\n", '')
+                try:
+                    infoFile = open(f"Info/{userFollowing}.txt", 'r')
+                    jsonInfo = dict(json.load(infoFile))
+                except:
+                    continue
 
-                newUser = User(
-                    jsonInfo['name'],
-                    jsonInfo['username'],
-                    jsonInfo['nPubs'],
-                    jsonInfo['nFollowers'],
-                    jsonInfo['nFollows'],
-                    jsonInfo['description'])
+                try:
+                    newUser = User(
+                        jsonInfo['name'],
+                        jsonInfo['username'],
+                        jsonInfo['nPubs'],
+                        jsonInfo['nFollowers'],
+                        jsonInfo['nFollows'],
+                    )
+                    newUser.descripcion = jsonInfo['description'] if jsonInfo['description'] else '',
+                except:
+                    pass
+                try:
+                    int(newUser.seguidores.replace('.', ''))
+                    newUser.tipo = "normal"
+                except:
+                    newUser.tipo = "famous"
+                users.append(newUser)
 
+            return users
 
-v = 10
-df = {'value': range(v)}
+        def makeNodes(users):
+            for u in users:
+                self.G.add_node(u.usuario,
+                                nombre=u.nombre,
+                                publicaciones=u.publicaciones,
+                                seguidores=u.seguidores,
+                                seguidos=u.seguidos,
+                                descripcion=u.descripcion,
+                                tipo=u.tipo)
 
-# Build your graph
-G = nx.Graph()
-colors = {
-    'famous'
-}
+        def makeRelations(target, users):
+            relations = {}
+            relationsList = []
+            _users = []
 
-## assign a node attribute, which I am going to color according to
-for node in G.nodes():
-    G.node[node]['category'] = my_category_dict[node]
-## put together a color map, one color for a category
-color_map = {'type_A': 'b', 'type_B': '#FF0099', 'type_C': '#660066'}
-## construct a list of colors then pass to node_color
-nx.draw(G, node_color=[color_map[G.node[node]['category']] for node in G])
-plt.show()
+            # Quitar el "\n"
+            for us in users:
+                _users.append(us.usuario.replace('\n', ''))
+            # Todos los usuarios
+            for u in _users:
+                self.G.add_edge(target, u)
+                relationsList.append([target, u])
+                if existFollowsFile(u):
+                    with open(f"Follows/{u}.txt") as f:
+                        follows = [uss.replace('\n', '') for uss in f.readlines()]
+                        for _u in follows:
+                            if relations.get(_u) != None:
+                                relations[_u] = int(relations[_u]) + 1
+                            else:
+                                relations[_u] = 1
+                            relationsList.append([u, _u])
 
-for x in range(1, v):
-    G.add_node(str(x))
-    G.add_edge(str(x), str(x + 1))
-    colors.append(3.5)
+            for k in relations.keys():
+                # 3rd relations
+                if relations[k] >= 15 and k not in _users:
+                    for r, _r in relationsList:
+                        if r != k and _r != k:
+                            continue
+                        if r not in self.G.nodes():
+                            self.G.add_node(r, tipo='x')
+                        if _r not in self.G.nodes():
+                            self.G.add_node(_r, tipo='x')
+                        self.G.add_edge(r, _r)
 
-colors.append(0)
-# Custom the nodes:
-nx.draw(G, with_labels=True, node_color=["#eee"], node_size=100, width=2.0)
+            # 2nd relations
+            for r, _r in relationsList:
+                if r in _users and _r in _users:
+                    self.G.add_edge(r, _r)
 
-plt.show()
+        users = usersConfigured()
+        makeNodes(users)
+        makeRelations(target, users)
+        self.show()
+
+    def show(self):
+        nx.draw(self.G,
+                with_labels=True,
+                node_color=[self.color_map[self.G.nodes[node]['tipo']] for node in self.G],
+                node_size=100,
+                # node_color='#A0CBE2',
+                edge_color=range(len(self.G.edges)),
+                width=.1)
+        plt.show()
