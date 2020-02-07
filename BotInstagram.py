@@ -59,7 +59,10 @@ class BotInstagram:
             bEntrar = self.driver.find_element_by_xpath(xPathLogin)
             bEntrar.click()
             time.sleep(3)
-
+            self.driver.find_element_by_xpath(
+                '//*[@id="react-root"]/section/main/article/div/div/div/div/div[1]/button/span').click()
+            time.sleep(20)
+            """
             user_box = self.driver.find_element_by_xpath(xPathUser)
             user_box.send_keys(self.user)
 
@@ -73,7 +76,7 @@ class BotInstagram:
             tError = self.driver.find_elements_by_xpath(tErrorXPath)
             if (len(tError) != 0):
                 raise Exception(tError[0].get_attribute("innerHTML").splitlines()[0])
-
+            """
             self.save_session()
 
         else:
@@ -162,9 +165,14 @@ class BotInstagram:
         except:
             isFamous = True
 
-        while not self.existFollowsList(user) and bFollowsLen != 0 and not isFamous:
+        while not existFollowsFile(user) and bFollowsLen != 0 and not isFamous:
             time.sleep(2)
             bFollows = self.driver.find_element_by_xpath(tFollowsXPath)
+            try:
+                if int(bFollows.text.replace('.', '')) > 1500:
+                    break
+            except:
+                break
             print(f'Seguidos de {user} comenzando. [{bFollows.text} seguidos]')
 
             bFollows.click()
@@ -194,14 +202,16 @@ class BotInstagram:
             if bFollowsLen == 0:
                 print(f"[PRIVADA] No se han podido obtener los seguidores de: {user}")
                 followsFile = open(f"Follows/{user}.txt", "w+")
+                time.sleep(1)
+                followsFile.close()
 
 
             elif isFamous:
                 print(f"[FAMOSA] No se han podido obtener los seguidores de: {user}")
                 followsFile = open(f"Follows/{user}.txt", "w+")
 
-            time.sleep(1)
-            followsFile.close()
+                time.sleep(1)
+                followsFile.close()
 
 
 
@@ -245,8 +255,16 @@ class BotInstagram:
         json.dump(info, infoFile)
         infoFile.close()
 
-    def existFollowsList(self, user):
-        if os.path.exists(f'Follows/{user}.txt'):
-            return True
-        else:
-            return False
+
+def existFollowsFile(user):
+    if os.path.exists(f'Follows/{user}.txt'):
+        return True
+    else:
+        return False
+
+
+def existInfoFile(user):
+    if os.path.exists(f'Follows/{user}.txt'):
+        return True
+    else:
+        return False
